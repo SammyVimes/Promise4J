@@ -1,3 +1,3 @@
 Promise4J
 =========
-Implementation of JS-like-Promise-api 
+Implementation of JS-like Promise-api 
