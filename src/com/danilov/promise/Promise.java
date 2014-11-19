@@ -49,8 +49,26 @@ public class Promise<Type> {
         }
     }
 
-    public <X> Promise<X> catchException(final Action<Exception, X>) {
-
+    public <X> Promise<X> catchException(final Action<Exception, X> handler) {
+        final Promise<X> nPromise = new Promise<X>();
+        boolean shouldExecute = false;
+        synchronized (this) {
+            this.onCatch = new Action<Exception, Void>() {
+                @Override
+                public Void action(final Exception e, final boolean success) {
+                    X _data = handler.action(e, isSuccessful);
+                    nPromise.finish(_data, true);
+                    return null;
+                }
+            };
+            if (isDone && !finishExecuted) {
+                shouldExecute = true;
+                finishExecuted = true;
+            }
+        }
+        if (shouldExecute) {
+            this.onFinish.action(data, isSuccessful);
+        }
     }
 
     public <X> Promise<X> then(final Action<Type, X> action) {
