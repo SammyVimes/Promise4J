@@ -69,6 +69,7 @@ public class Promise<Type> {
         if (shouldExecute) {
             this.onFinish.action(data, isSuccessful);
         }
+        return nPromise;
     }
 
     public <X> Promise<X> then(final Action<Type, X> action) {
@@ -153,6 +154,51 @@ public class Promise<Type> {
             }
         });
         return promise;
+    }
+
+    public static <X> Promise<X> run(final PromiseRunnable<X> runnable, final boolean async) {
+        final Promise<X> promise = new Promise<X>();
+        if (async) {
+            defaultExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        runnable.run(promise.new Resolver());
+                    } catch (Exception e) {
+                        promise.exception(e);
+                    }
+                }
+            });
+        } else {
+            try {
+                runnable.run(promise.new Resolver());
+            } catch (Exception e) {
+                promise.exception(e);
+            }
+        }
+        return promise;
+    }
+
+    public class Resolver {
+
+        public void resolve(final Type data) {
+            finish(data, true);
+        }
+
+        public void reject(final String error) {
+            finish(null, false);
+        }
+
+        public void except(final Exception e) {
+            exception(e);
+        }
+
+    }
+
+    public interface PromiseRunnable<RunnableType> {
+
+        public void run(final Promise<RunnableType>.Resolver resolver);
+
     }
 
 }
