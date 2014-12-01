@@ -1,5 +1,6 @@
 package com.danilov.promise;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -69,6 +70,7 @@ public class Promise<Type> {
         if (shouldExecute) {
             this.onFinish.action(data, isSuccessful);
         }
+        return nPromise;
     }
 
     public <X> Promise<X> then(final Action<Type, X> action) {
@@ -109,6 +111,35 @@ public class Promise<Type> {
         for (int i = 0; i < count; i++) {
             final int num = i;
             promises[i].then(new Action() {
+                @Override
+                public Object action(final Object data, final boolean success) {
+                    dataArray[num] = data;
+                    boolean shouldFinish = false;
+                    synchronized (counter) {
+                        counter.count--;
+                        if (counter.count == 0) {
+                            shouldFinish = true;
+                        }
+                    }
+                    if (shouldFinish) {
+                        promise.finish(dataArray, true);
+                    }
+                    return null;
+                }
+            });
+        }
+        return promise;
+    }
+
+    public static Promise<Object[]> all(final List<? extends Promise> promises) {
+        int count = promises.size();
+        final Promise<Object[]> promise = new Promise<Object[]>();
+        final Counter counter = new Counter();
+        counter.count = count;
+        final Object[] dataArray = new Object[promises.size()];
+        for (int i = 0; i < count; i++) {
+            final int num = i;
+            promises.get(i).then(new Action() {
                 @Override
                 public Object action(final Object data, final boolean success) {
                     dataArray[num] = data;
